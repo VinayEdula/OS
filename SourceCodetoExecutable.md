@@ -1,4 +1,7 @@
-# C++ Compilation process:
+# C++ Sourcecode to Execution:
+
+When a C++ program is executed, it doesn’t run directly from the source code. Instead, it goes through a multi-stage compilation process that gradually transforms human-readable code (.cpp) into an executable machine program (.exe or a.out). Each stage—Preprocessing, Compilation, Assembly, Linking, and Loading—has a distinct role in converting, optimizing, and preparing code for execution. Understanding these steps helps debug build issues, manage dependencies, and optimize performance at a lower level.
+
 <img width="940" height="1283" alt="image" src="https://github.com/user-attachments/assets/8a9a4631-2142-4a0e-888f-75e43051e0af" />
 
 ## 1. C Preprocessor (CPP)
@@ -892,7 +895,7 @@ static float pi = 3.14;
 
 #### 🧩 4.3. Uninitialized Data Segment (BSS)
 
-* Contains **global** and **static** variables** that are declared but not initialized**.
+* Contains **global** and **static** variables that are declared but not initialized.
 * Automatically initialized to **zero** at program startup.
 
 **Example:**
