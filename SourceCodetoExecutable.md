@@ -581,12 +581,8 @@ Each object file contains:
 * **math.o** → definition of `add()`.
 * **utils.o** → definition of `printMsg()`.
 
-The **Linker** then combines all these into one program:
-
-```bash
-g++ main.o math.o utils.o -o program
-```
 All `.o` files → combined by the linker → single **executable**. If any object file is missing, the linker will throw an **undefined reference** error because it cannot find the symbol definition. 
+
 ---
 
 ## 🧩 1. Symbol Resolution — *Connecting All References*
