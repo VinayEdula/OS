@@ -95,7 +95,6 @@ Other conditional directives:
 ```
 
 **Example:**
-**Preprocessor → expands macros and includes → compiler compiles expanded code**
 ```c
 #define OS 1
 
@@ -107,6 +106,7 @@ Other conditional directives:
   printf("Unknown OS\n");
 #endif
 ```
+Preprocessor → expands macros and includes → compiler compiles expanded code.
 
 ---
 
