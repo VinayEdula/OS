@@ -110,7 +110,7 @@ Other conditional directives:
 **Preprocessor → expands macros and includes → compiler compiles expanded code**
 ---
 
-#2. Compiler
+# 2. Compiler
 
 A **compiler** converts preprocessed high-level language code into low-level machine code that the computer can execute. The compilation process occurs in **two main phases**:
 
