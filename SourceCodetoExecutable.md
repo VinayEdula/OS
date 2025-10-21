@@ -112,7 +112,7 @@ Other conditional directives:
 
 # 2. Compiler
 
-A **compiler** converts preprocessed high-level language code into low-level machine code that the computer can execute. The compilation process occurs in **two main phases**:
+A **compiler** converts preprocessed high-level language code into assembly code that goes input to assembler. The compilation process occurs in **two main phases**:
 
 1. **Front-end Phase** — Understands the program and ensures correctness.
 2. **Back-end Phase** — Optimizes and generates machine code.
