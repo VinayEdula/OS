@@ -107,11 +107,10 @@ Other conditional directives:
   printf("Unknown OS\n");
 #endif
 ```
-
----
 **Preprocessor → expands macros and includes → compiler compiles expanded code**
+---
 
-#Compiler
+# Compiler
 
 A **compiler** converts preprocessed high-level language code into low-level machine code that the computer can execute. The compilation process occurs in **two main phases**:
 
