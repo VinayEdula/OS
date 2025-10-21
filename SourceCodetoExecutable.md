@@ -110,7 +110,7 @@ Other conditional directives:
 **Preprocessor → expands macros and includes → compiler compiles expanded code**
 ---
 
-# Compiler
+#2. Compiler
 
 A **compiler** converts preprocessed high-level language code into low-level machine code that the computer can execute. The compilation process occurs in **two main phases**:
 
@@ -325,7 +325,7 @@ MOV [a], EAX
 2. **Instruction Selection:** Chooses appropriate machine instructions.
 3. **Instruction Scheduling:** Orders instructions to avoid stalls and improve CPU pipeline performance.
 
-**Output:** Assembly Code (or Object Code after Assembler phase).
+**Output:** Assembly Code (.s in c)
 
 ---
 
@@ -341,3 +341,219 @@ MOV [a], EAX
 |               | Code Generation              | Produce final assembly/machine code | Target code                          |
 
 ---
+# 3. Assembler
+
+After the **compiler** generates the **assembly code**, the next stage in the C++ compilation process is handled by the **Assembler**. The **Assembler** converts the **assembly code (.s)** — a human-readable form of low-level instructions — into **object code (.o)**, which is the actual **binary machine code** that the CPU can execute.
+
+---
+
+## 🔹 Overview
+
+* The assembler is a **translator** that converts **assembly language** into **machine language** (binary instructions).
+* Assembly code is architecture-specific (x86, ARM, etc.). Each instruction like `MOV`, `ADD`, or `JMP` is translated into corresponding binary opcodes.
+* The assembler also creates important data structures like the **Symbol Table(different from compiler's table)** and **Relocation Table**, which are used later by the **Linker**.
+
+---
+
+## ⚙️ Input and Output
+
+| Step      | Input         | Output      | File Extension              |
+| --------- | ------------- | ----------- | --------------------------- |
+| Assembler | Assembly Code | Object Code | `.o` (or `.obj` on Windows) |
+
+**Example:**
+
+```bash
+g++ -c Hello.s
+```
+
+This produces:
+
+```
+Hello.o   // Object file
+```
+
+---
+
+## 🧠 What Happens Inside the Assembler
+
+The assembler performs several key tasks:
+
+### 1. **Parsing Assembly Instructions**
+
+* Reads each instruction line (like `MOV EAX, EBX`) and breaks it into **opcode** and **operands**.
+* Verifies the syntax according to the target processor's instruction set.
+
+**Example:**
+
+```asm
+MOV EAX, [a]
+ADD EAX, [b]
+MOV [sum], EAX
+```
+
+Assembler parses this into tokens and ensures valid instruction format.
+
+---
+
+### 2. **Opcode Translation (Mnemonic → Binary)**
+
+* Converts symbolic mnemonics into actual **binary opcodes** that the CPU understands.
+* Each mnemonic (like `MOV`, `ADD`) has a unique binary encoding depending on registers and addressing modes.
+
+**Example:**
+
+| Assembly     | Binary Equivalent   |
+| ------------ | ------------------- |
+| MOV EAX, EBX | `10001011 11011000` |
+| ADD EAX, 1   | `00000101 00000001` |
+
+---
+
+### 3. **Symbol Table Generation**
+
+* The assembler maintains a **symbol table** for all labels, variables, and function references.
+
+**Example:**
+
+| Symbol | Address    | Type     |
+| ------ | ---------- | -------- |
+| `main` | 0x00400000 | Function |
+| `sum`  | 0x00400014 | Variable |
+| `a`    | 0x00400018 | Variable |
+
+If a symbol is **declared but not yet defined**, it is marked as **external** and resolved later by the linker.
+
+---
+
+### 4. **Relocation Table Creation**
+
+When the Assembler generates an object file, it still doesn’t know where in memory the program will actually be loaded. This uncertainty creates a problem: instructions that refer to addresses (like variables or jump labels) can’t yet be filled with real memory addresses. To handle this, the assembler builds a Relocation Table — a list of all memory addresses that need to be “fixed up” later by the Linker and Loader.
+
+Imagine you write a small assembly program:
+
+```asm
+MOV EAX, [a]
+ADD EAX, [b]
+MOV [sum], EAX
+```
+
+When the assembler translates this to machine code, it doesn’t know where variables `a`, `b`, and `sum` will exist in memory. It leaves placeholders instead of real addresses.
+
+#### ⚙️ What the Assembler Does
+
+The assembler:
+
+1. Writes machine instructions with placeholder addresses.
+2. Creates **relocation entries** for every instruction that refers to a symbol whose address is not yet known.
+
+**Example machine code:**
+
+```
+Offset   Instruction
+0x0000   MOV EAX, [????]   ; address of a unknown
+0x0006   ADD EAX, [????]   ; address of b unknown
+0x000C   MOV [????], EAX   ; address of sum unknown
+```
+Here, the `????` means “to be filled later.”
+
+#### 📦 Example Relocation Table
+
+| Offset (Location) | Type     | Symbol | Description                                       |
+| ----------------- | -------- | ------ | ------------------------------------------------- |
+| 0x0001            | R_X86_32 | a      | Memory address of variable `a` needs to be filled |
+| 0x0007            | R_X86_32 | b      | Address of `b` must be resolved                   |
+| 0x000D            | R_X86_32 | sum    | Address of `sum` to be patched                    |
+
+
+#### 🧠 Types of Relocation Entries
+
+| Type                      | Meaning                                             | Example                       |
+| ------------------------- | --------------------------------------------------- | ----------------------------- |
+| **Absolute (R_X86_32)**   | Needs the full physical address replaced later      | Accessing global variable `a` |
+| **Relative (R_X86_PC32)** | Needs an offset relative to the current instruction | For jumps like `JMP end`      |
+
+**Example:**
+
+```asm
+JMP end   ; assembler doesn’t know how far to jump → linker will adjust
+```
+---
+
+### 5. **Machine Code Generation**
+
+* The assembler produces binary machine instructions from parsed assembly.
+* Each instruction is encoded with the exact bit pattern recognized by the CPU.
+
+The generated **object file (.o)** contains:
+
+* Machine instructions (binary form)
+* Symbol table
+* Relocation table
+* Debug information (optional)
+
+**Example Layout of Object File:**
+
+```
+Header
+Text Section (machine code)
+Data Section (constants, variables)
+Symbol Table
+Relocation Table
+Debug Info
+```
+
+---
+
+## 📦 Example Flow
+
+### Input (Assembly Code `Hello.s`):
+
+```asm
+section .data
+a dd 10
+b dd 20
+sum dd 0
+
+section .text
+global _start
+_start:
+    mov eax, [a]
+    add eax, [b]
+    mov [sum], eax
+```
+
+### Output (Object File `Hello.o`):
+
+```
+Binary representation:
+  B8 0A 00 00 00   ; mov eax, [a]
+  03 05 14 00 00 00 ; add eax, [b]
+  A3 18 00 00 00   ; mov [sum], eax
+```
+
+Includes symbol table and relocation entries for `a`, `b`, and `sum`.
+
+---
+
+## 🧩 Assembler Types
+
+| Type                   | Description                                                                  | Example                     |
+| ---------------------- | ---------------------------------------------------------------------------- | --------------------------- |
+| **One-pass assembler** | Translates and assigns addresses in a single scan; faster but less flexible. | Used in embedded systems    |
+| **Two-pass assembler** | First pass builds symbol table; second pass resolves addresses.              | Used in most modern systems |
+
+---
+
+### Responsibilities
+
+| Function                              | Description                               |
+| ------------------------------------- | ----------------------------------------- |
+| **Translate Assembly → Machine Code** | Converts mnemonics into binary opcodes    |
+| **Symbol Table Management**           | Maps labels and variables to addresses    |
+| **Relocation Table Creation**         | Marks addresses to be fixed by the linker |
+| **Error Checking**                    | Detects syntax or undefined symbol errors |
+| **Output Object Code**                | Produces `.o` file ready for linking      |
+
+---
+
