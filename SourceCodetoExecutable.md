@@ -110,3 +110,235 @@ Other conditional directives:
 
 ---
 **Preprocessor → expands macros and includes → compiler compiles expanded code**
+
+#Compiler
+
+A **compiler** converts preprocessed high-level language code into low-level machine code that the computer can execute. The compilation process occurs in **two main phases**:
+
+1. **Front-end Phase** — Understands the program and ensures correctness.
+2. **Back-end Phase** — Optimizes and generates machine code.
+
+Each phase has several sub-stages, shown in the diagram: **Lexical Analysis → Syntax Analysis → Semantic Analysis → Intermediate Code Generation → Code Optimization → Code Generation.**
+<img width="416" height="522" alt="image" src="https://github.com/user-attachments/assets/f4a302fd-97ec-4690-8c60-ec7f7f496eef" />
+
+---
+
+## ⚙️ 1. Front-End Phase
+
+The front-end focuses on **analyzing and understanding** the source code. Its main tasks are to check for **errors** and to build an internal representation of the program.
+
+### 🔹 (a) Lexical Analysis — *Tokenizing the Source Code*
+
+**Purpose:**
+
+* Converts raw source code (sequence of characters) into **tokens** — the smallest meaningful units.
+
+**Example:**
+
+```c
+int sum = a + b;
+```
+
+➡ Lexical analyzer outputs:
+
+```
+[INT] [ID:sum] [ASSIGN] [ID:a] [PLUS] [ID:b] [SEMICOLON]
+```
+
+**Key points:**
+
+* Removes comments and whitespace.
+* Detects invalid tokens.
+* Generates a **token stream** used by the parser.
+
+**Initial Symbol Table (After Lexical Analysis):**
+
+| Symbol | Type | Scope  | Value |
+| ------ | ---- | ------ | ----- |
+| sum    | int  | global | —     |
+| a      | int  | global | —     |
+| b      | int  | global | —     |
+---
+
+### 🔹 (b) Syntax Analysis — *Checking Grammatical Structure*
+
+**Purpose:**
+
+* Ensures the tokens follow the grammar (rules) of the language.
+* Builds a **Parse Tree** or **Abstract Syntax Tree (AST)**.
+
+**Example:**
+For the expression:
+
+```c
+sum = a + b * c;
+```
+
+AST:
+
+```
+   =
+  / \
+ sum  +
+     / \
+    a   *
+       / \
+      b   c
+```
+
+**Errors Detected:**
+
+* Missing semicolons, brackets.
+* Misplaced operators.
+* Invalid syntax.
+
+**Output:** AST representing the structure of the program.
+
+---
+
+### 🔹 (c) Semantic Analysis — *Checking Meaning and Types*
+
+**Purpose:**
+
+* Ensures **logical and type correctness**.
+* Checks whether variables, functions, and operations make sense.
+
+**Examples:**
+
+```c
+int x = "hello";  // ❌ Type mismatch
+float sum = a + b; // ✅ if a,b are float
+```
+
+**Checks performed:**
+
+* Type compatibility.
+* Variable declaration before use.
+* Function arguments and return types.
+
+**Updated Symbol Table (After Semantic Checks):**
+
+| Symbol | Type  | Scope  | Value   | Status                   |
+| ------ | ----- | ------ | ------- | ------------------------ |
+| sum    | int   | global | —       | ✅ Valid                  |
+| a      | int   | global | —       | ✅ Valid                  |
+| b      | float | global | —       | ⚠️ Type mismatch warning |
+| x      | int   | global | "hello" | ❌ Error: Type mismatch   |
+
+**Key Differences:**
+
+* Added **Value** column (shows assigned values if any).
+* Added **Status** column to show validation results.
+* Type mismatches and undeclared variables are now marked.
+
+**Output:** Annotated AST (with type and scope info) + updated Symbol Table.
+
+---
+
+### 🔹 (d) Intermediate Code Generation — *Platform-Independent Representation*
+
+**Purpose:**
+
+* Converts the verified AST into an **Intermediate Representation (IR)** that is easier to optimize and portable across architectures.
+
+**Example:**
+For `a = b + c * d;`
+Intermediate Code (Three-Address Code, TAC):
+
+```
+t1 = c * d
+a = b + t1
+```
+
+**Advantages of IR:**
+
+* Easier to optimize.
+* Independent of hardware.
+* Acts as a bridge between front-end and back-end.
+
+---
+
+## ⚙️ 2. Back-End Phase
+
+The back-end takes the intermediate code and produces efficient machine code for a specific processor.
+
+### 🔹 (e) Code Optimization — *Making Code Efficient*
+
+**Purpose:**
+
+* Improve the performance of code without changing its output.
+* Optimize **speed**, **memory usage**, and **resource efficiency**.
+
+**Types of Optimizations:**
+
+1. **Constant Folding:**
+
+   ```c
+   int x = 3 * 4;  // → int x = 12;
+   ```
+2. **Dead Code Elimination:**
+
+   ```c
+   if (0) { printf("Hello"); }  // Removed
+   ```
+3. **Common Subexpression Elimination:**
+
+   ```c
+   x = a * b;
+   y = a * b + c;  // → reuse result of a*b
+   ```
+4. **Loop Optimization:**
+   Move calculations outside loops if they don’t change within.
+
+**Goal:** Minimize computation and memory access.
+
+**Output:** Optimized Intermediate Code.
+
+---
+
+### 🔹 (f) Code Generation — *Producing Assembly Code*
+
+**Purpose:**
+
+* Converts optimized intermediate code into **target machine instructions**.
+* Handles registers, addressing modes, and instruction selection.
+
+**Example:**
+For IR:
+
+```
+t1 = c * d
+a = b + t1
+```
+
+Possible x86 Assembly:
+
+```asm
+MOV EAX, [c]
+IMUL EAX, [d]
+ADD EAX, [b]
+MOV [a], EAX
+```
+
+**Sub-stages:**
+
+1. **Register Allocation:** Assigns variables to CPU registers efficiently.
+2. **Instruction Selection:** Chooses appropriate machine instructions.
+3. **Instruction Scheduling:** Orders instructions to avoid stalls and improve CPU pipeline performance.
+
+**Output:** Assembly Code (or Object Code after Assembler phase).
+
+---
+
+## 🧩 Putting It All Together 
+
+| Phase         | Stage                        | Purpose                             | Output                               |
+| ------------- | ---------------------------- | ----------------------------------- | ------------------------------------ |
+| **Front-end** | Lexical Analysis             | Convert characters to tokens        | Token stream + initial symbol table  |
+|               | Syntax Analysis              | Build structure of program          | Parse tree / AST                     |
+|               | Semantic Analysis            | Check meaning and type correctness  | Annotated AST + updated symbol table |
+|               | Intermediate Code Generation | Platform-independent representation | Intermediate code (IR)               |
+| **Back-end**  | Code Optimization            | Improve speed and efficiency        | Optimized IR                         |
+|               | Code Generation              | Produce final assembly/machine code | Target code                          |
+
+---
