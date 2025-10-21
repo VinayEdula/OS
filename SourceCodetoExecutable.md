@@ -490,6 +490,12 @@ Example:
 
 So, instruction `MOV A, 0006` → becomes `MOV A, 4006`. This ensures that the program accesses the correct memory locations at runtime.
 
+#### Absolute vs. Relative Addressing in Relocation
+
+**Absolute Addressing:** Uses fixed memory addresses (e.g., `JMP 2050H`). The instruction directly specifies the target memory address. When the program is moved, these absolute addresses must be modified using the relocation table because they depend on the program’s physical location.
+
+**Relative Addressing:** Uses offsets (e.g., `JMP +05` or `JMP LOOP`, where the assembler stores the distance from the current instruction). These addresses are position-independent — if the program moves, the relative offset remains valid. Hence, **relative addresses often don’t need relocation.**
+
 ---
 
 ### 5. **Machine Code Generation**
