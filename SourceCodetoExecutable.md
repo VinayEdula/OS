@@ -6,9 +6,7 @@ When a C++ program is executed, it doesn’t run directly from the source code. 
 
 ## 1. C Preprocessor (CPP)
 
-### Overview
-
-The **C Preprocessor** is a program that processes and modifies your source code in the beginning of compilation. It handles **directives** that begin with `#`, performing textual substitutions and code inclusion. Its output is a pure C code file that the compiler then compiles. The result is an expanded .i file (pure C code with all macros and includes expanded).
+The **C Preprocessor** is a program that processes and modifies our source code in the beginning of compilation. It handles **directives** that begin with `#`, performing textual substitutions and code inclusion. Its output is a pure C code file that the compiler then compiles. The result is an expanded .i file (pure C code with all macros and includes expanded).
 
 ### Key Functions of the Preprocessor
 
@@ -66,12 +64,11 @@ Whenever `PI` or `MAX` appear in code, they are replaced by thier values.
 #define SQUARE(x) ((x) * (x))
 ```
 
-**Usage:**
+**Usage:** Preprocessor Expands it to ((called_value) * (called_value)) wherever SQUARE() is used.
 
 ```c
 int a = SQUARE(5);  // Expands to ((5) * (5))
 ```
-Preprocessor Expands it to ((called_value) * (called_value)) wherever SQUARE() is used.
 
 ---
 
