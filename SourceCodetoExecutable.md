@@ -536,3 +536,480 @@ The generated **object file (.o)** contains:
 
 ---
 
+# 4. Linker
+
+After the **assembler** generates one or more object files (`.o`), the **Linker** combines them into a single **executable file** (`a.out` on Linux or `.exe` on Windows). It resolves all symbol references across files and connects all program pieces together.
+
+---
+
+In large programs, the code is divided into multiple **source files** (`.c` or `.cpp`) to improve modularity and manageability. Each source file is compiled independently by the compiler → assembler → into its own **object file (.o)**.
+
+### 🧩 Example:
+
+Suppose we have three files:
+
+```c
+// main.cpp
+#include "math.h"
+int main() {
+    int result = add(2, 3);
+    return result;
+}
+
+// math.cpp
+int add(int a, int b) {
+    return a + b;
+}
+
+// utils.cpp
+void printMsg() {
+    printf("Hello World\n");
+}
+```
+
+Each `.cpp` file is compiled separately:
+
+```bash
+g++ -c main.cpp   → main.o
+g++ -c math.cpp   → math.o
+g++ -c utils.cpp  → utils.o
+```
+
+Each object file contains:
+
+* **main.o** → `main()` definition, external reference to `add()`.
+* **math.o** → definition of `add()`.
+* **utils.o** → definition of `printMsg()`.
+
+The **Linker** then combines all these into one program:
+
+```bash
+g++ main.o math.o utils.o -o program
+```
+All `.o` files → combined by the linker → single **executable**. If any object file is missing, the linker will throw an **undefined reference** error because it cannot find the symbol definition. 
+---
+
+## 🧩 1. Symbol Resolution — *Connecting All References*
+
+Each object file has its own **symbol table**. Some symbols are **defined** in the same file, some are externally referenced. The linker’s first job is to connect these references.
+
+**Example:**
+
+`main.o`:
+
+```c
+extern int add(int, int);
+int main() { return add(2, 3); }
+```
+
+`math.o`:
+
+```c
+int add(int a, int b) { return a + b; }
+```
+
+During linking:
+
+* `main.o` references symbol `add` (undefined locally).
+* `math.o` defines symbol `add`.
+* The linker connects `main.o` → `math.o`.
+---
+
+
+## ⚙️ 2. Relocation — *Fixing Memory Addresses*
+
+Each object file assumes its **code and data start at address `0`**. When linking multiple files, the **linker does not know the final physical memory addresses** (that’s determined later by the loader). Instead, it assigns **relative or virtual addresses** — offsets within the program’s memory layout — and updates all references using the **Relocation Table** from the assembler.
+
+These offsets ensure that all functions and variables have unique locations *within the program*, even before the program is actually loaded into RAM. When the loader later loads the executable into memory, it decides the **base address** (for example, `0x400000`), and adds this base address to all offsets defined by the linker. This is how final virtual addresses are computed at runtime.
+
+---
+
+### 🔧 Steps in Relocation:
+
+1. **Merge** text (code) and data sections from all object files.
+2. **Assign relative start offsets** to each section within the executable.
+3. **Adjust (relocate)** every address-dependent instruction or data reference using the relocation entries.
+4. The **loader** later adds the base address to these offsets when loading the program into memory.
+
+---
+
+**Example:**
+
+| Symbol | Linker Offset | Loader Base Address | Final Virtual Address |
+| ------ | ------------- | ------------------- | --------------------- |
+| `main` | 0x0000        | 0x400000            | 0x400000              |
+| `add`  | 0x1000        | 0x400000            | 0x401000              |
+| `msg`  | 0x1020        | 0x400000            | 0x401020              |
+
+If the instruction in `main.o` says:
+
+```
+CALL 0x0000   ; placeholder for add()
+```
+
+The linker updates it to:
+
+```
+CALL 0x1000   ; relative offset to add()
+```
+
+When the loader loads the program at base address `0x400000`, it becomes:
+
+```
+CALL 0x401000 ; actual virtual address in memory
+```
+
+---
+
+## 🧱 3. Merging Sections — *Building the Executable*
+
+After relocation, the linker merges sections from all object files into a single memory layout with consistent virtual offsets.
+
+| Section     | Merged From                | Purpose                                         |
+| ----------- | -------------------------- | ----------------------------------------------- |
+| **.text**   | Code sections of all files | Contains all CPU instructions                   |
+| **.data**   | Initialized variables      | Program’s data segment                          |
+| **.bss**    | Uninitialized variables    | Allocated later by loader                       |
+| **.rodata** | Constants                  | Read-only section (e.g., strings, const values) |
+
+The linker combines them into one continuous address space, ready for the loader to place into actual memory.
+
+---
+
+## 🔗 4. Static vs Dynamic Linking
+
+### 🧩 **Static Linking**
+
+* In **static linking**, the linker copies all required functions and variables from libraries directly into the executable.
+* It happens **at compile time**, producing a single self-contained binary file.
+* The resulting executable has no dependency on external `.so` or `.dll` files — all code is included.
+
+**Example:**
+
+```bash
+g++ main.o math.o -static -o prog
+```
+
+✅ This embeds all the library routines (like `printf`, `sqrt`, etc.) into the final binary.
+
+**How it works:**
+
+* The linker searches the static libraries (like `libc.a`) for symbols used in the program.
+* It copies the **used object modules** into the final executable.
+* The result is a **larger but independent** executable that can run on any system without external dependencies.
+
+**Advantages:**
+
+1. **No runtime dependencies** – program can run even if libraries are missing on the system.
+2. **Faster startup and execution** – no runtime symbol resolution.
+3. **Portability** – single self-contained binary.
+
+**Disadvantages:**
+
+1. **Larger file size** – all library code is embedded.
+2. **Recompilation needed** when any library code changes.
+3. **Redundant memory usage** – if multiple programs use the same library, each keeps its own copy in memory.
+
+---
+
+### 🧩 **Dynamic Linking**
+
+* In **dynamic linking**, the executable only stores **references** to external shared libraries instead of copying their code.
+* The actual library code (`.so` on Linux or `.dll` on Windows) is loaded **at runtime** by the **Loader**.
+* This makes the executable much smaller and allows multiple programs to share the same library code in memory.
+
+**Example:**
+
+```bash
+g++ main.o -lm -o prog  # links dynamically with libm.so
+```
+
+**How it works:**
+
+* The linker notes which shared libraries the program depends on and adds this information to the executable header.
+* When the program runs, the **loader** finds and loads these shared libraries into memory.
+* The **Dynamic Linker/Loader (ld-linux.so)** resolves all symbol references so the program can use library functions.
+
+**Advantages:**
+
+1. **Smaller executables** – libraries aren’t included in the file.
+2. **Memory efficiency** – shared libraries are loaded once and shared among processes.
+3. **Easier updates** – updating a library automatically benefits all dependent programs.
+
+**Disadvantages:**
+
+1. **Runtime dependency** – program won’t run if required libraries are missing or incompatible.
+2. **Slightly slower startup** – time needed for the loader to resolve symbols.
+3. **Version conflicts** – if library APIs change, older programs may break (the classic *DLL Hell* problem on Windows).
+
+---
+
+### 🧠 In short:
+
+* **Static Linking** → Everything packaged into one big box before shipping.
+* **Dynamic Linking** → Only the address of the library is stored; the actual book is fetched when needed at runtime.
+
+
+## Output of Linker
+
+After all linking steps, the linker produces an **Executable File** that includes:
+
+1. **Merged sections** (code, data, bss, rodata).
+2. **Resolved symbol table** (no unresolved externals).
+3. **Relocation information cleared** (all addresses finalized).
+4. **Entry point (main)** marked in the file header.
+
+**Example command:**
+
+```bash
+g++ -o Hello Hello.o math.o utils.o
+```
+
+Output:
+
+```
+Hello → executable binary
+```
+---
+
+# 5. Loader
+
+Once the **linker** has produced an **executable file**, the final stage in the C++ compilation process is handled by the **Loader** — a part of the **Operating System** responsible for loading the program into memory and starting its execution.
+
+---
+The **Loader** performs several crucial tasks before your program begins running:
+
+1. **Loads the executable** from disk into memory (RAM).
+2. **Allocates space** for program sections (.text, .data, .bss, stack, heap).
+3. **Performs runtime relocation** – adjusts addresses according to where the program is loaded.
+4. **Links dynamically shared libraries** (for dynamic linking).
+5. **Transfers control** to the program’s entry point (`main()` function).
+
+---
+
+## ⚙️ 1. Loading the Executable into Memory
+
+When you run a program (e.g., typing `./a.out` in Linux or double-clicking an .exe in Windows):
+
+* The **OS loader** reads the **executable file header** (like ELF in Linux or PE in Windows).
+* The header specifies where each section (.text, .data, .bss) should be loaded in virtual memory.
+
+**Example Layout:**
+
+| Section   | Description                  | Typical Virtual Address       |
+| --------- | ---------------------------- | ----------------------------- |
+| `.text`   | Code (instructions)          | 0x400000 – 0x40FFFF           |
+| `.data`   | Initialized data             | 0x600000 – 0x600FFF           |
+| `.bss`    | Uninitialized data           | 0x601000 – 0x601FFF           |
+| **Stack** | Function call stack          | High memory (e.g., 0x7FFF...) |
+| **Heap**  | Dynamically allocated memory | Between `.bss` and stack      |
+
+The loader copies these sections from the executable file into the correct regions of memory.
+
+---
+
+## ⚙️ 2. Relocation (Runtime Address Adjustment)
+
+When loading a program, the loader chooses a **base address** for it in memory. If the program wasn’t compiled as **position-independent**, the loader uses the **relocation table** (from the linker) to fix every instruction or variable that depends on an absolute address.
+
+**Example:**
+
+If the linker assumed `.text` starts at `0x0000`, but the loader loads it at `0x400000`, then every memory reference is updated by adding the offset `0x400000`.
+
+| Symbol   | Old Address | Base Address | New (Actual) Address |
+| -------- | ----------- | ------------ | -------------------- |
+| `main`   | 0x0000      | 0x400000     | 0x400000             |
+| `printf` | 0x1000      | 0x400000     | 0x401000             |
+
+---
+
+## ⚙️ 3. Dynamic Linking at Runtime
+
+If the program was **dynamically linked**, the loader invokes a special component — the **Dynamic Linker (ld-linux.so)** on Linux or the **Windows Loader**.
+
+This step:
+
+* Loads shared libraries (like `libc.so`, `libm.so`) into memory.
+* Resolves symbol addresses by mapping library functions (like `printf`) to the program’s references.
+* Updates the **Global Offset Table (GOT)** and **Procedure Linkage Table (PLT)** so the program can call these functions.
+
+**Example Flow:**
+
+1. Executable references `printf` → found in `libc.so`.
+2. Loader maps `libc.so` into memory.
+3. Dynamic linker patches the address of `printf` into the GOT/PLT entry.
+
+✅ From now on, whenever `printf()` is called, control directly jumps to its address inside `libc.so`.
+
+---
+
+## ⚙️ 4. Memory Allocation and Process Setup
+
+Before the program starts executing:
+
+1. The loader sets up the **stack** (for function calls and local variables).
+2. Initializes the **heap** (for dynamic memory like `malloc` or `new`).
+3. Loads **environment variables** and command-line arguments (`argc`, `argv`).
+4. Initializes **global/static variables** from the `.data` section.
+5. Zero-initializes the `.bss` section (uninitialized data).
+
+### 🧠 Memory Layout in a Running C++ Program
+
+When the **Loader** loads the executable into memory, it organizes it into a structured **process memory layout**. This layout defines how the program's memory is divided into different regions, each serving a specific purpose.
+
+The memory layout typically looks like this:
+
+<img width="1000" height="800" alt="image" src="https://github.com/user-attachments/assets/2f241c2e-2876-4ec0-bdc2-f89d2872a205" />
+
+---
+
+#### 🧩 4.1. Text Segment (Code Segment)
+
+* Contains **compiled machine instructions** of the program.
+* It is **read-only** to prevent accidental modification of instructions.
+* Typically shared among processes running the same program to save memory.
+
+**Example:**
+
+```c
+int add(int a, int b) { return a + b; }
+```
+
+All the CPU instructions for this function live in the **text segment**.
+
+---
+
+#### 🧩 4.2. Initialized Data Segment (.data)
+
+* Stores **global** and **static** variables that are explicitly initialized.
+* Values are loaded from the executable file.
+* This memory is both **readable and writable**.
+
+**Example:**
+
+```c
+int count = 10;   // Stored in .data
+static float pi = 3.14;
+```
+
+---
+
+#### 🧩 4.3. Uninitialized Data Segment (BSS)
+
+* Contains **global** and **static** variables** that are declared but not initialized**.
+* Automatically initialized to **zero** at program startup.
+
+**Example:**
+
+```c
+int total;      // Stored in BSS, initialized to 0
+static int flag;  // Also stored in BSS
+```
+
+---
+
+#### 🧩 4.4. Heap
+
+* The **heap** is used for **dynamic memory allocation** during runtime.
+* It grows **upward** toward higher memory addresses.
+* Managed using functions like `malloc()`, `calloc()`, `free()` or `new` / `delete` in C++.
+
+**Example:**
+
+```cpp
+int* arr = new int[100]; // Allocated on the heap
+```
+
+*If you don’t free heap memory, it remains allocated until the process terminates (memory leak).*
+
+---
+
+#### 🧩 4.5. Stack
+
+* The **stack** is used for **function calls**, **local variables**, and **return addresses**.
+* It grows **downward** (toward lower memory addresses).
+* Automatically managed by the OS — freed when functions return.
+
+**Example:**
+
+```cpp
+void func() {
+    int x = 5;   // Stored on the stack
+}
+```
+
+Each function call creates a **stack frame** containing local variables and bookkeeping info.
+
+---
+
+#### 🧩 4.6. Command-Line Arguments & Environment Variables
+
+* Stored at the **top of the process address space**.
+* Provide runtime configuration to the program.
+
+**Example:**
+
+```bash
+./program input.txt
+```
+
+Here, `argc` and `argv` store these command-line arguments.
+
+**Environment variables** (like `PATH`, `HOME`) are also stored here and accessible via `getenv()`.
+
+---
+
+## ⚙️ Static vs Dynamic Memory Layout
+
+| Type                      | Sections        | Description                                            |
+| ------------------------- | --------------- | ------------------------------------------------------ |
+| **Static Memory Layout**  | Text, Data, BSS | Determined at compile & link time, fixed by the loader |
+| **Dynamic Memory Layout** | Heap, Stack     | Determined during program execution, managed by OS     |
+
+---
+
+## ⚙️ Example Summary Table
+
+| Segment   | Direction | Lifetime       | Typical Usage         | Example                  |
+| --------- | --------- | -------------- | --------------------- | ------------------------ |
+| **Text**  | Fixed     | Entire program | Code                  | Function definitions     |
+| **Data**  | Fixed     | Entire program | Initialized globals   | `int x = 10;`            |
+| **BSS**   | Fixed     | Entire program | Uninitialized globals | `int x;`                 |
+| **Heap**  | Upward    | Dynamic        | Dynamic allocations   | `new`, `malloc()`        |
+| **Stack** | Downward  | Function scope | Local variables       | `int x;` inside function |
+
+---
+
+## ⚙️ 5. Transfer of Control to the Program
+
+Once everything is set up:
+
+* The loader sets the **Program Counter (PC)** to the **entry point**.
+* Execution begins from this address.
+
+After `main()` returns, control goes back through `exit()` to the OS, releasing all allocated resources.
+
+---
+
+## Summary 
+
+| Step | Stage            | Loader Task                               | Output/Effect             |
+| ---- | ---------------- | ----------------------------------------- | ------------------------- |
+| 1    | Load Executable  | Copy sections (.text, .data, etc.) to RAM | Program in memory         |
+| 2    | Relocation       | Adjust addresses to base address          | Correct memory references |
+| 3    | Dynamic Linking  | Load shared libraries                     | Functions resolved        |
+| 4    | Memory Setup     | Prepare stack, heap, env                  | Program ready to run      |
+| 5    | Transfer Control | Jump to `main()`                          | Program starts execution  |
+
+---
+
+## 🧱 Final Outcome
+
+After the loader finishes:
+
+* The program is fully placed in memory.
+* All symbols and addresses are resolved.
+* Stack and heap are ready.
+* Execution officially begins.
+
+✅ Your C++ program is now running.
