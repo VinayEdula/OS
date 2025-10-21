@@ -239,7 +239,7 @@ float sum = a + b; // ✅ if a,b are float
 
 **Purpose:**
 
-* Converts the verified AST into an **Intermediate Representation (IR)** that is easier to optimize and portable across architectures.
+* Converts the verified AST into an **Intermediate Representation (IR)** that is easier to optimize and portable across architectures. Before turning it into assembly code, the compiler can optimize this intermediate code to make the final program run faster or use less memory. 
 
 **Example:**
 For `a = b + c * d;`
@@ -252,8 +252,9 @@ a = b + t1
 
 **Advantages of IR:**
 
-* Easier to optimize.
-* Independent of hardware.
+* It is easier to improve the performance of source code by optimizing the intermediate code.
+* Independent of hardware. Intermediate code is platform-independent, meaning that it can be translated into machine code or bytecode for any platform.
+* Intermediate code generation can enable the use of various code optimization techniques, leading to improved performance and efficiency of the generated code.
 * Acts as a bridge between front-end and back-end.
 
 ---
@@ -339,7 +340,7 @@ MOV [a], EAX
 |               | Semantic Analysis            | Check meaning and type correctness  | Annotated AST + updated symbol table |
 |               | Intermediate Code Generation | Platform-independent representation | Intermediate code (IR)               |
 | **Back-end**  | Code Optimization            | Improve speed and efficiency        | Optimized IR                         |
-|               | Code Generation              | Produce final assembly/machine code | Target code                          |
+|               | Code Generation              | Produce final assembly              | Target code                          |
 
 ---
 # 3. Assembler
@@ -437,7 +438,7 @@ When a program is assembled, it is not tied to a fixed location in memory. Moder
 
 #### Address-Dependent vs Non-Address-Dependent Fields
 
-Only the parts of code that references memory addresses need relocation. Instructions that use registers, immediate constants, or opcodes alone are not affected by where the program is loaded — hence, not address-dependent so they wont be listed in Relocation table.
+Only the parts of code that references memory addresses need relocation. Registers are fixed CPU components — not memory-resident. Only instructions referencing memory addresses (variables, labels, jumps) require relocation.
 
 | Type of Field           | Example      | Depends on Memory Address? | Needs Relocation? |
 | ----------------------- | ------------ | -------------------------- | ----------------- |
