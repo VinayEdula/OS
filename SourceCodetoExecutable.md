@@ -495,46 +495,9 @@ The generated **object file (.o)** contains:
 **Example Layout of Object File:**
 
 ```
-Header
-Text Section (machine code)
-Data Section (constants, variables)
-Symbol Table
-Relocation Table
-Debug Info
-```
-
----
-
-## 📦 Example Flow
-
-### Input (Assembly Code `Hello.s`):
-
-```asm
-section .data
-a dd 10
-b dd 20
-sum dd 0
-
-section .text
-global _start
-_start:
-    mov eax, [a]
-    add eax, [b]
-    mov [sum], eax
-```
-
-### Output (Object File `Hello.o`):
+<img width="769" height="576" alt="image" src="https://github.com/user-attachments/assets/3ce2a5c1-b084-4e9c-9ef5-71968e26404e" />
 
 ```
-Binary representation:
-  B8 0A 00 00 00   ; mov eax, [a]
-  03 05 14 00 00 00 ; add eax, [b]
-  A3 18 00 00 00   ; mov [sum], eax
-```
-
-Includes symbol table and relocation entries for `a`, `b`, and `sum`.
-
----
 
 ## 🧩 Assembler Types
 
