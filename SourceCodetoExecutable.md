@@ -429,56 +429,67 @@ If a symbol is **declared but not yet defined**, it is marked as **external** an
 
 ### 4. **Relocation Table Creation**
 
-When the Assembler generates an object file, it still doesn’t know where in memory the program will actually be loaded. This uncertainty creates a problem: instructions that refer to addresses (like variables or jump labels) can’t yet be filled with real memory addresses. To handle this, the assembler builds a Relocation Table — a list of all memory addresses that need to be “fixed up” later by the Linker and Loader.
+When a program is assembled, it is not tied to a fixed location in memory. Modern systems often load programs into different memory regions each time they execute. To make this possible, assemblers and loaders use **relocation** — the process of adjusting address-dependent instructions and data when a program is loaded. The **Relocation Table** is the assembler’s way of helping the loader do this correctly. It records **which parts of the object code depend on memory addresses**, allowing the loader to modify them later.
 
-Imagine you write a small assembly program:
+#### ⚙️ Purpose of Relocation Table
 
-```asm
-MOV EAX, [a]
-ADD EAX, [b]
-MOV [sum], EAX
-```
+> To allow the same program to run correctly **no matter where it is loaded in memory**. Without relocation, all addresses in the code would be **absolute** (fixed). If the program were loaded at a different address, all jumps, memory references, and data accesses would point to the wrong locations. The relocation table identifies **which addresses inside the object code** need to be modified when the loader decides where to place the program in main memory.
 
-When the assembler translates this to machine code, it doesn’t know where variables `a`, `b`, and `sum` will exist in memory. It leaves placeholders instead of real addresses.
+#### Address-Dependent vs Non-Address-Dependent Fields
 
-#### ⚙️ What the Assembler Does
+Only the parts of code that references memory addresses need relocation. Instructions that use registers, immediate constants, or opcodes alone are not affected by where the program is loaded — hence, not address-dependent so they wont be listed in Relocation table.
 
-The assembler:
+| Type of Field           | Example      | Depends on Memory Address? | Needs Relocation? |
+| ----------------------- | ------------ | -------------------------- | ----------------- |
+| **Memory reference**    | `MOV A, NUM` | ✅ Yes                      | ✅ Yes             |
+| **Jump instruction**    | `JMP LOOP`   | ✅ Yes                      | ✅ Yes             |
+| **Register operations** | `MOV A, B`   | ❌ No                       | ❌ No              |
+| **Immediate constant**  | `MVI A, 5`   | ❌ No                       | ❌ No              |
+| **HLT or NOP**          | `HLT`        | ❌ No                       | ❌ No              |
 
-1. Writes machine instructions with placeholder addresses.
-2. Creates **relocation entries** for every instruction that refers to a symbol whose address is not yet known.
-
-**Example machine code:**
-
-```
-Offset   Instruction
-0x0000   MOV EAX, [????]   ; address of a unknown
-0x0006   ADD EAX, [????]   ; address of b unknown
-0x000C   MOV [????], EAX   ; address of sum unknown
-```
-Here, the `????` means “to be filled later.”
-
-#### 📦 Example Relocation Table
-
-| Offset (Location) | Type     | Symbol | Description                                       |
-| ----------------- | -------- | ------ | ------------------------------------------------- |
-| 0x0001            | R_X86_32 | a      | Memory address of variable `a` needs to be filled |
-| 0x0007            | R_X86_32 | b      | Address of `b` must be resolved                   |
-| 0x000D            | R_X86_32 | sum    | Address of `sum` to be patched                    |
-
-
-#### 🧠 Types of Relocation Entries
-
-| Type                      | Meaning                                             | Example                       |
-| ------------------------- | --------------------------------------------------- | ----------------------------- |
-| **Absolute (R_X86_32)**   | Needs the full physical address replaced later      | Accessing global variable `a` |
-| **Relative (R_X86_PC32)** | Needs an offset relative to the current instruction | For jumps like `JMP end`      |
-
-**Example:**
+#### Example Assembly Code
 
 ```asm
-JMP end   ; assembler doesn’t know how far to jump → linker will adjust
+START:  MOV A, NUM
+        ADD A, VALUE
+        JMP END
+NUM:    DB 5
+VALUE:  DB 10
+END:    HLT
 ```
+
+Assume the assembler starts from address `0000`.
+
+| Address | Machine Code | Description           |
+| ------- | ------------ | --------------------- |
+| 0000    | MOV A, 0006  | Uses address of NUM   |
+| 0003    | ADD A, 0007  | Uses address of VALUE |
+| 0006    | 05           | Data for NUM          |
+| 0007    | 0A           | Data for VALUE        |
+
+#### Relocation Table Created by Assembler
+
+| Field Address | Description      | Requires Relocation | Reason                 |
+| ------------- | ---------------- | ------------------- | ---------------------- |
+| 0001–0002     | Address of NUM   | ✅ Yes               | Depends on label NUM   |
+| 0004–0005     | Address of VALUE | ✅ Yes               | Depends on label VALUE |
+| Others        | Opcodes and Data | ❌ No                | No memory dependency   |
+
+This table tells the loader exactly which bytes must be modified when the program’s base address changes.
+
+#### Loader’s Role in Relocation
+
+When the loader places the program in memory, it chooses a **load address (base address)** — e.g., 0x4000 instead of 0x0000. Then, for each entry in the relocation table, the loader **adds the base address** to the corresponding address field.
+
+Example:
+
+| Field | Original Address | New Address (Base=4000h) |
+| ----- | ---------------- | ------------------------ |
+| NUM   | 0006             | 4006                     |
+| VALUE | 0007             | 4007                     |
+
+So, instruction `MOV A, 0006` → becomes `MOV A, 4006`. This ensures that the program accesses the correct memory locations at runtime.
+
 ---
 
 ### 5. **Machine Code Generation**
