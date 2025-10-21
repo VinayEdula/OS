@@ -118,6 +118,7 @@ A **compiler** converts preprocessed high-level language code into assembly code
 2. **Back-end Phase** — Optimizes and generates machine code.
 
 Each phase has several sub-stages, shown in the diagram: **Lexical Analysis → Syntax Analysis → Semantic Analysis → Intermediate Code Generation → Code Optimization → Code Generation.**
+
 <img width="416" height="522" alt="image" src="https://github.com/user-attachments/assets/f4a302fd-97ec-4690-8c60-ec7f7f496eef" />
 
 ---
@@ -492,12 +493,10 @@ The generated **object file (.o)** contains:
 * Relocation table
 * Debug information (optional)
 
-**Example Layout of Object File:**
+**Layout of Object File:**
 
-```
 <img width="769" height="576" alt="image" src="https://github.com/user-attachments/assets/3ce2a5c1-b084-4e9c-9ef5-71968e26404e" />
 
-```
 
 ## 🧩 Assembler Types
 
